@@ -24,7 +24,7 @@ def baca_dataset():
                         if not row["Provinsi"].strip() or not row["Kota/Kab"].strip():
                             raise  ValueError("Provinsi atau Kota/Kab kosong")
 
-                        if row["Status Sekolah"].strip() != "Negeri dan Swasta":
+                        if row["Status Sekolah"].strip() not in ["Negeri dan Swasta", "Negeri", "Swasta"]:
                             continue
 
                         baik         = konversi_angka(row["Baik"])
