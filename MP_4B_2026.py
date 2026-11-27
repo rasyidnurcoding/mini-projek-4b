@@ -13,18 +13,16 @@ def baca_dataset():
 
             if reader.fieldnames is None:
                 print("Error: Dataset tidak memiliki header.")
-
             elif not all(kolom in reader.fieldnames for kolom in KOLOM_WAJIB):
                 kolom_hilang = [kolom for kolom in KOLOM_WAJIB if kolom not in reader.fieldnames]
                 print("Error: Kolom berikut tidak ditemukan:")
                 for kolom in kolom_hilang:
                     print(f"- {kolom}")
-
             else:
                 for nomor_baris, row in enumerate(reader, start=2):
                     try:
                         if not row["Provinsi"].strip() or not row["Kota/Kab"].strip():
-                            raise ValueError("Provinsi atau Kota/Kab kosong")
+                            raise  ValueError("Provinsi atau Kota/Kab kosong")
 
                         if row["Status Sekolah"].strip() != "Negeri dan Swasta":
                             continue
@@ -38,30 +36,31 @@ def baca_dataset():
                         if min(baik, rusak_ringan, rusak_sedang, rusak_berat, jumlah) < 0:
                             raise ValueError("Terdapat nilai negatif pada data ruang kelas")
 
-                        total_rusak             = rusak_ringan + rusak_sedang + rusak_berat
+                        total_rusak = rusak_ringan + rusak_sedang + rusak_berat
+                        persen_rusak = (total_rusak / jumlah) * 100 if jumlah > 0 else 0.0
+
                         row["Baik"]             = baik
                         row["Rusak Ringan"]     = rusak_ringan
                         row["Rusak Sedang"]     = rusak_sedang
                         row["Rusak Berat"]      = rusak_berat
                         row["Jumlah"]           = jumlah
                         row["Status_Kerusakan"] = klasifikasi_kerusakan(total_rusak, jumlah)
+                        row["Persen_Rusak"]     = persen_rusak  
 
                         data.append(row)
 
-                    except Exception:
+                    except(ValueError):
                         jumlah_error += 1
                         continue
 
                 if len(data) == 0:
                     print("\nERROR: Dataset kosong atau tidak memiliki data valid.")
-                    return None
-
-                print("\nDataset berhasil dimuat.")
-                print(f"Jumlah data kabupaten/kota valid : {len(data)}")
+                else:
+                    print("\nDataset berhasil dimuat.")
+                    print(f"Jumlah data kabupaten/kota valid : {len(data)}")
 
                 if jumlah_error > 0:
                     print(f"Jumlah baris dilewati/tidak valid : {jumlah_error}")
-
                 return data
 
     except FileNotFoundError:
@@ -77,7 +76,7 @@ def konversi_angka(nilai):
     teks = str(nilai).strip()
     if teks == "":
         return 0.0
-    if teks.count(".") == 1 and len(teks.split(".")[1]) == 3:
+    elif "." in teks:
         teks = teks.replace(".", "")
     return float(teks)
 
@@ -86,7 +85,7 @@ def klasifikasi_kerusakan(total_rusak, jumlah_kelas):
         return "Aman"
 
     persen_rusak = (total_rusak / jumlah_kelas) * 100
-    if persen_rusak   > 25:
+    if persen_rusak > 25:
         return "Kritis"
     elif persen_rusak > 10:
         return "Perlu Perhatian"
@@ -94,31 +93,28 @@ def klasifikasi_kerusakan(total_rusak, jumlah_kelas):
         return "Ringan"
 
 def format_angka(nilai):
-    return f"{nilai:,.1f}"
-
-def format_rupiah(nilai):
-    return f"Rp {nilai:,.0f}"
+    return f"{nilai:,.0f}"
 
 def login():
-    peran = {"1": "Mahasiswa", "2": "Dosen", "3": "Masyarakat Umum"}
+    pengguna = {"1": "Mahasiswa", "2": "Dosen", "3": "Masyarakat Umum"}
 
-    print("\nPILIH PERAN PENGGUNA")
-    for kode, nama_peran in peran.items():
-        print(f"{kode}. {nama_peran}")
+    print("\nPILIH PENGGUNA")
+    for kode, nama_pengguna in pengguna.items():
+        print(f"{kode}. {nama_pengguna}")
 
     while True:
         pilihan = input("Masuk sebagai (1-3): ").strip()
-        if pilihan in peran:
-            print(f"\nBerhasil masuk sebagai {peran[pilihan]}. Selamat datang!\n")
-            return peran[pilihan]
+        if pilihan in pengguna:
+            print(f"\nBerhasil masuk sebagai {pengguna[pilihan]}. Selamat datang!\n")
+            return pengguna[pilihan]
         print("\nPilihan tidak valid. Silakan pilih 1, 2, atau 3.\n")
 
 def daftar_provinsi(data):
-    daftar       = []
+    daftar = []
     daftar_kunci = []
 
     for row in data:
-        key     = row["Provinsi"].strip().lower()
+        key = row["Provinsi"].strip().lower()
         tampil = row["Provinsi"].strip().title()
 
         if key and key not in daftar_kunci:
@@ -151,7 +147,7 @@ def hitung_total(data_provinsi):
         "Rusak Ringan": 0.0,
         "Rusak Sedang": 0.0,
         "Rusak Berat": 0.0,
-        "Jumlah": 0.0}
+        "Jumlah": 0.0,}
 
     for row in data_provinsi:
         for kolom in total:
@@ -161,7 +157,7 @@ def hitung_total(data_provinsi):
 
 def tampilkan_total(nama_provinsi, total):
     total_rusak = total["Rusak Ringan"] + total["Rusak Sedang"] + total["Rusak Berat"]
-    status = klasifikasi_kerusakan(total_rusak, total["Jumlah"])
+    status      = klasifikasi_kerusakan(total_rusak, total["Jumlah"])
 
     print(f"\nHASIL DATA PROVINSI {nama_provinsi.upper()}")
     print(f"Ruang Kelas Baik     : {format_angka(total['Baik'])}")
@@ -185,8 +181,8 @@ def menu_peringatan(data):
     tampilkan_total(nama_prov, total)
 
     print("\nDAFTAR KABUPATEN/KOTA DENGAN KERUSAKAN")
-    print(f"{'Kab/Kota':30} | {'Ringan':10} | {'Sedang':10} | {'Berat':10} | {'Status':16}")
-    print("-" * 89)
+    print(f"{'Kab/Kota':30} | {'Ringan':10} | {'Sedang':10} | {'Berat':10} | {'% Rusak':10} | {'Status':16}")
+    print("-" * 102)
 
     jumlah_wilayah_rusak = 0
 
@@ -194,8 +190,7 @@ def menu_peringatan(data):
         total_rusak = row["Rusak Ringan"] + row["Rusak Sedang"] + row["Rusak Berat"]
         if total_rusak > 0:
             jumlah_wilayah_rusak += 1
-            print(f"{row['Kota/Kab']:30} | {format_angka(row['Rusak Ringan']):>10} | {format_angka(row['Rusak Sedang']):>10} | {format_angka(row['Rusak Berat']):>10} | "
-                f"{row['Status_Kerusakan']:16}")
+            print(f"{row['Kota/Kab']:30} | {format_angka(row['Rusak Ringan']):>10} | {format_angka(row['Rusak Sedang']):>10} | {format_angka(row['Rusak Berat']):>10} | {row['Persen_Rusak']:9.2f}% | {row['Status_Kerusakan']:16}")
 
     print(f"\nJumlah kabupaten/kota dengan kerusakan: {jumlah_wilayah_rusak}")
     if jumlah_wilayah_rusak == 0:
@@ -237,7 +232,6 @@ def menu_perbandingan(data):
         ("ruang kelas rusak berat", total1["Rusak Berat"], total2["Rusak Berat"]),
         ("jumlah ruang kelas", total1["Jumlah"], total2["Jumlah"]),
         ("total kerusakan ruang kelas", total_kerusakan1, total_kerusakan2),]:
-
         if val1 > val2:
             print(f"{prov1} memiliki {label} lebih banyak.")
         elif val1 < val2:
@@ -245,21 +239,55 @@ def menu_perbandingan(data):
         else:
             print(f"{label.capitalize()} kedua provinsi sama.")
 
-def input_biaya(pesan):
+def menu_rangking_provinsi(data):
+    opsi_kondisi = {
+        "1": "Baik",
+        "2": "Rusak Ringan",
+        "3": "Rusak Sedang",
+        "4": "Rusak Berat",}
+
     while True:
-        try:
-            biaya = float(input(pesan))
-            if biaya < 0:
-                print("Peringatan: Biaya tidak boleh negatif.")
-                continue
-            return biaya
-        except ValueError:
-            print("Input tidak valid. Masukkan angka biaya.")
+        print("\nMENU RANGKING KONDISI RUANG KELAS PER PROVINSI")
+        print("1. Baik")
+        print("2. Rusak Ringan")
+        print("3. Rusak Sedang")
+        print("4. Rusak Berat")
+        print("5. Kembali ke Menu Utama")
 
-def menu_anggaran(data):
-    print("\nMENU ANGGARAN BIAYA")
+        pilihan = input("\nPilih kondisi ruang kelas (1-5): ").strip()
 
-    key_prov, nama_prov = pilih_provinsi(data, "Pilih nomor provinsi")
+        if pilihan == "5":
+            break
+        if pilihan not in opsi_kondisi:
+            print("\nPilihan tidak valid. Silakan pilih 1 sampai 5.")
+            continue
+
+        kolom_kondisi = opsi_kondisi[pilihan]
+        rekapan = []
+
+        for key_prov, nama_prov in daftar_provinsi(data):
+            data_prov = cari_data_provinsi(data, key_prov)
+            total = hitung_total(data_prov)
+            rekapan.append((nama_prov, total[kolom_kondisi], total["Jumlah"]))
+
+        for i in range(len(rekapan)):
+            for j in range(i + 1, len(rekapan)):
+                if rekapan[i][1] < rekapan[j][1]:
+                    sementara  = rekapan[i]
+                    rekapan[i] = rekapan[j]
+                    rekapan[j] = sementara
+
+        print(f"\nRANGKING PROVINSI BERDASARKAN KONDISI: {kolom_kondisi.upper()}")
+        print(f"{'Rank':4} | {'Provinsi':31} | {'kolom_kondisi':15} | {'Total_Kelas':15}")
+        print("-" * 73)
+
+        for peringkat, (nama_prov, nilai_kondisi, total_kelas) in enumerate(rekapan, start=1):
+            print(f"{peringkat:4} | {nama_prov:31} | {format_angka(nilai_kondisi):>15} | {format_angka(total_kelas):>15}")
+
+def menu_rekomendasi_solusi(data):
+    print("\nMENU REKOMENDASI SOLUSI KONDISI RUANG KELAS")
+
+    key_prov, nama_prov = pilih_provinsi(data, "Pilih nomor provinsi untuk melihat solusi")
     data_provinsi = cari_data_provinsi(data, key_prov)
 
     if not data_provinsi:
@@ -267,56 +295,52 @@ def menu_anggaran(data):
         return
 
     total = hitung_total(data_provinsi)
+    tampilkan_total(nama_prov, total)
 
-    print(f"\nDATA KERUSAKAN RUANG KELAS - {nama_prov.upper()}")
-    print(f"Rusak Ringan : {format_angka(total['Rusak Ringan'])}")
-    print(f"Rusak Sedang : {format_angka(total['Rusak Sedang'])}")
-    print(f"Rusak Berat  : {format_angka(total['Rusak Berat'])}")
+    total_rusak = total["Rusak Ringan"] + total["Rusak Sedang"] + total["Rusak Berat"]
+    status      = klasifikasi_kerusakan(total_rusak, total["Jumlah"])
 
-    print("\nINPUT ESTIMASI BIAYA PERBAIKAN")
-    biaya_ringan = input_biaya("Biaya rusak ringan per ruang : Rp ")
-    biaya_sedang = input_biaya("Biaya rusak sedang per ruang : Rp ")
-    biaya_berat = input_biaya("Biaya rusak berat per ruang  : Rp ")
+    print("\nPENJELASAN SOLUSI BERDASARKAN KONDISI RUANG KELAS:")
+    print(f"Kondisi Baik ({format_angka(total['Baik'])}):\nPemeliharaan rutin dan berkala untuk mempertahankan kualitas dan kelayakan bangunan ruang kelas.\n")
+    print(f"Kondisi Rusak Ringan ({format_angka(total['Rusak Ringan'])}):\nPerbaikan setempat, seperti penambalan plesteran dinding yang retak atau mengelupas, pengecatan ulang, dan perbaikan komponen kecil.\n")
+    print(f"Kondisi Rusak Sedang ({format_angka(total['Rusak Sedang'])}):\nRehabilitasi komponen bangunan yang rusak, seperti perbaikan atap, plafon, lantai, atau kusen, untuk mengembalikan fungsi dan kualitas fisik ruang kelas.\n")
+    print(f"Kondisi Rusak Berat ({format_angka(total['Rusak Berat'])}):\nPemeriksaan teknis menyeluruh, rehabilitasi berat, atau pembangunan kembali komponen dan struktur utama yang rusak demi keselamatan kegiatan belajar.\n")
 
-    rincian = [
-        ("Rusak Ringan", total["Rusak Ringan"], biaya_ringan),
-        ("Rusak Sedang", total["Rusak Sedang"], biaya_sedang),
-        ("Rusak Berat", total["Rusak Berat"], biaya_berat),]
-
-    total_anggaran = sum(jumlah * biaya for _, jumlah, biaya in rincian)
-
-    print("\nRINCIAN ESTIMASI ANGGARAN")
-    print(f"{'Kategori':20} | {'Jumlah Ruang':15} | {'Biaya per Ruang':20} | {'Total Biaya':20}")
-    print("-" * 85)
-
-    for kategori, jumlah, biaya in rincian:
-        subtotal = jumlah * biaya
-        print(f"{kategori:20} | {format_angka(jumlah):>15} | {format_rupiah(biaya):>20} | {format_rupiah(subtotal):>20}")
-
-    print(f"\nTOTAL ESTIMASI ANGGARAN: {format_rupiah(total_anggaran)}")
+    print(f"\nPRIORITAS PENANGANAN PROVINSI {nama_prov.upper()} (Status: {status}):")
+    if status   == "Kritis":
+        print("Tingkat kerusakan tergolong kritis sehingga penanganan darurat keselamatan, evaluasi struktur, dan rehabilitasi berat perlu diprioritaskan.")
+    elif status == "Perlu Perhatian":
+        print("Tingkat kerusakan perlu perhatian sehingga rehabilitasi kerusakan sedang dan berat perlu dijadwalkan secara terukur.")
+    elif status == "Ringan":
+        print("Tingkat kerusakan tergolong Ringan sehingga penanganan dapat difokuskan pada perbaikan Ringan dan perawatan rutin.")
+    else:
+        print("Kondisi ruang kelas tergolong aman sehingga fokus utama adalah pemeliharaan rutin dan pendataan berkala.")
 
 def menu_utama(data):
     while True:
         print("\nSISTEM ANALISIS KONDISI RUANG KELAS")
         print("1. Menu Peringatan Kerusakan")
         print("2. Menu Perbandingan 2 Provinsi")
-        print("3. Menu Anggaran Biaya")
-        print("4. Keluar")
+        print("3. Menu Rangking Kondisi Ruang Kelas per Provinsi")
+        print("4. Menu Rekomendasi Solusi Kondisi Ruang Kelas")
+        print("5. Keluar")
 
-        pilihan = input("\nPilih menu (1-4): ").strip()
+        pilihan = input("\nPilih menu (1-5): ").strip()
 
-        if pilihan == "1":
+        if pilihan   == "1":
             menu_peringatan(data)
         elif pilihan == "2":
             menu_perbandingan(data)
         elif pilihan == "3":
-            menu_anggaran(data)
+            menu_rangking_provinsi(data)
         elif pilihan == "4":
+            menu_rekomendasi_solusi(data)
+        elif pilihan == "5":
             print("\nTerima kasih telah menggunakan program.")
             break
         else:
             print("\nPilihan menu tidak valid.")
-            print("Silakan pilih menu 1 sampai 4.")
+            print("Silakan pilih menu 1 sampai 5.")
 
 def main():
     print("PROGRAM ANALISIS KONDISI RUANG KELAS SD/MI")
